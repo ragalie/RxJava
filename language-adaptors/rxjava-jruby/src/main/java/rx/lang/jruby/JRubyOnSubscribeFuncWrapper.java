@@ -16,6 +16,10 @@
 package rx.lang.jruby;
 
 import org.jruby.RubyProc;
+import org.jruby.runtime.ThreadContext;
+import org.jruby.runtime.builtin.IRubyObject;
+import org.jruby.javasupport.JavaUtil;
+
 import rx.Observable.OnSubscribeFunc;
 import rx.Observer;
 import rx.Subscription;
@@ -27,15 +31,18 @@ import rx.Subscription;
  */
 public class JRubyOnSubscribeFuncWrapper<T> implements OnSubscribeFunc<T> {
 
-    private final RubyProc<Subscription> proc;
+    private final RubyProc proc;
+    private final ThreadContext context;
 
-    public GroovyOnSubscribeFuncWrapper(RubyProc<Subscription> proc) {
+    public JRubyOnSubscribeFuncWrapper(ThreadContext context, RubyProc proc) {
         this.proc = proc;
+        this.context = context;
     }
 
     @Override
     public Subscription onSubscribe(Observer<? super T> observer) {
-        return proc.call(observer);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(context.getRuntime(), observer)};
+        return (Subscription) proc.call(context, array);
     }
 
 }

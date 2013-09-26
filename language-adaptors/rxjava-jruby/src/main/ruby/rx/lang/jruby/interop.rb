@@ -1,9 +1,11 @@
+require 'pp'
+
 klasses  = [Java::Rx::Observable, Java::RxObservables::BlockingObservable]
 function = Java::RxUtilFunctions::Function.java_class
 
 WRAPPERS = {
-  Java::RxUtilFunctions::Action.java_class       => Java::RxLangJruby::JRubyActionWrapper,
-  Java::RxObservable::OnSubscribeFunc.java_class => Java::RxLangJruby::JRubyOnSubscribeFuncWrapper
+  Java::RxUtilFunctions::Action         => Java::RxLangJruby::JRubyActionWrapper,
+  Java::Rx::Observable::OnSubscribeFunc => Java::RxLangJruby::JRubyOnSubscribeFuncWrapper
 }
 
 WRAPPERS.default = Java::RxLangJruby::JRubyFunctionWrapper
@@ -13,30 +15,49 @@ klasses.each do |klass|
     method.public? && method.parameter_types.any? {|type| function.assignable_from?(type)}
   end
 
-  parameter_types = function_methods.group_by(&:name).each_with_object({}) do |(method_name, methods), memo|
-    types = methods.map(&:parameter_types).select {|type| function.assignable_from?(type)}.flatten.uniq
-    raise ArgumentError, "More than one function type for #{method_name}" if types.length > 1
+  parameter_types = {}
+  function_methods.each do |method|
+    parameter_types[method.name] ||= []
 
-    memo[method_name] = WRAPPERS[types.first]
+    method.parameter_types.each_with_index do |type, idx|
+      next unless function.assignable_from?(type)
+
+      constructor = WRAPPERS.find do |java_class, wrapper|
+        type.ruby_class.ancestors.include?(java_class)
+      end
+
+      constructor = (constructor && constructor.last) || WRAPPERS.default
+
+      parameter_types[method.name][idx] ||= []
+      parameter_types[method.name][idx] << constructor
+    end
   end
 
-  function_methods.map(&:name).uniq.each do |method_name|
-    klass.class_eval <<EOS
-      def #{method_name}(*args, &block)
-        args.map! do |arg|
-          if arg.is_a?(Proc)
-            #{parameter_types[method_name]}.new(arg)
-          else
-            arg
-          end
-        end
+  parameter_types.each_pair do |method_name, types|
+    types.map! do |type|
+      next type.first if type && type.uniq.length == 1
+      nil
+    end
+  end
 
-        if block_given?
-          block = #{parameter_types[method_name]}.new(block)
-        end
+  parameter_types.each_pair do |method_name, types|
+    next if types.all?(&:nil?)
 
-        super(*args, &block)
+    klass.send(:alias_method, "#{method_name}_without_wrapping", method_name)
+    klass.send(:define_method, method_name) do |*args, &block|
+      args = args.each_with_index.map do |arg, idx|
+        if arg.is_a?(Proc) && types[idx]
+          types[idx].new(JRuby.runtime.get_current_context, arg)
+        else
+          arg
+        end
       end
-EOS
+
+      if block && types[args.length]
+        block = types[args.length].new(JRuby.runtime.get_current_context, block)
+      end
+
+      send("#{method_name}_without_wrapping", *(args + [block].compact))
+    end
   end
 end

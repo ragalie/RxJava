@@ -16,6 +16,11 @@
 package rx.lang.jruby;
 
 import org.jruby.RubyProc;
+import org.jruby.Ruby;
+import org.jruby.runtime.ThreadContext;
+import org.jruby.runtime.builtin.IRubyObject;
+import org.jruby.javasupport.JavaUtil;
+
 import rx.util.functions.Func0;
 import rx.util.functions.Func1;
 import rx.util.functions.Func2;
@@ -51,64 +56,118 @@ public class JRubyFunctionWrapper<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> impleme
         Func9<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>,
         FuncN<R> {
 
-    private final RubyProc<R> proc;
+    private final RubyProc proc;
+    private final ThreadContext context;
+    private final Ruby runtime;
 
-    public GroovyFunctionWrapper(RubyProc<R> proc) {
+    public JRubyFunctionWrapper(ThreadContext context, RubyProc proc) {
         this.proc = proc;
+        this.context = context;
+        this.runtime = context.getRuntime();
     }
 
     @Override
     public R call() {
-        return (R) proc.call();
+        IRubyObject[] array = new IRubyObject[0];
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1) {
-        return (R) proc.call(t1);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2) {
-        return (R) proc.call(t1, t2);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3) {
-        return (R) proc.call(t1, t2, t3);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3, T4 t4) {
-        return (R) proc.call(t1, t2, t3, t4);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3),
+                               JavaUtil.convertJavaToRuby(runtime, t4)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) {
-        return (R) proc.call(t1, t2, t3, t4, t5);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3),
+                               JavaUtil.convertJavaToRuby(runtime, t4),
+                               JavaUtil.convertJavaToRuby(runtime, t5)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) {
-        return (R) proc.call(t1, t2, t3, t4, t5, t6);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3),
+                               JavaUtil.convertJavaToRuby(runtime, t4),
+                               JavaUtil.convertJavaToRuby(runtime, t5),
+                               JavaUtil.convertJavaToRuby(runtime, t6)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) {
-        return (R) proc.call(t1, t2, t3, t4, t5, t6, t7);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3),
+                               JavaUtil.convertJavaToRuby(runtime, t4),
+                               JavaUtil.convertJavaToRuby(runtime, t5),
+                               JavaUtil.convertJavaToRuby(runtime, t6),
+                               JavaUtil.convertJavaToRuby(runtime, t7)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8) {
-        return (R) proc.call(t1, t2, t3, t4, t5, t6, t7, t8);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3),
+                               JavaUtil.convertJavaToRuby(runtime, t4),
+                               JavaUtil.convertJavaToRuby(runtime, t5),
+                               JavaUtil.convertJavaToRuby(runtime, t6),
+                               JavaUtil.convertJavaToRuby(runtime, t7),
+                               JavaUtil.convertJavaToRuby(runtime, t8)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8, T9 t9) {
-        return (R) proc.call(t1, t2, t3, t4, t5, t6, t7, t8, t9);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3),
+                               JavaUtil.convertJavaToRuby(runtime, t4),
+                               JavaUtil.convertJavaToRuby(runtime, t5),
+                               JavaUtil.convertJavaToRuby(runtime, t6),
+                               JavaUtil.convertJavaToRuby(runtime, t7),
+                               JavaUtil.convertJavaToRuby(runtime, t8),
+                               JavaUtil.convertJavaToRuby(runtime, t9)};
+        return (R) proc.call(context, array);
     }
 
     @Override
     public R call(Object... args) {
-        return (R) proc.call(args);
+        IRubyObject[] array = new IRubyObject[args.length];
+        for (int i = 0; i < args.length; i++) {
+          array[i] = JavaUtil.convertJavaToRuby(runtime, args[i]);
+        }
+        return (R) proc.call(context, array);
     }
 }

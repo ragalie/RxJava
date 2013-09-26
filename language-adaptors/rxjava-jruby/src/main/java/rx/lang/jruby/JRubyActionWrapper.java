@@ -16,6 +16,11 @@
 package rx.lang.jruby;
 
 import org.jruby.RubyProc;
+import org.jruby.Ruby;
+import org.jruby.runtime.ThreadContext;
+import org.jruby.runtime.builtin.IRubyObject;
+import org.jruby.javasupport.JavaUtil;
+
 import rx.util.functions.Action;
 import rx.util.functions.Action0;
 import rx.util.functions.Action1;
@@ -32,30 +37,41 @@ import rx.util.functions.Action3;
  */
 public class JRubyActionWrapper<T1, T2, T3, T4> implements Action, Action0, Action1<T1>, Action2<T1, T2>, Action3<T1, T2, T3> {
 
-    private final RubyProc<Void> proc;
+    private final RubyProc proc;
+    private final ThreadContext context;
+    private final Ruby runtime;
 
-    public GroovyActionWrapper(RubyProc<Void> proc) {
+    public JRubyActionWrapper(ThreadContext context, RubyProc proc) {
         this.proc = proc;
+        this.context = context;
+        this.runtime = context.getRuntime();
     }
 
     @Override
     public void call() {
-        proc.call();
+        IRubyObject[] array = new IRubyObject[0];
+        proc.call(context, array);
     }
 
     @Override
     public void call(T1 t1) {
-        proc.call(t1);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1)};
+        proc.call(context, array);
     }
 
     @Override
     public void call(T1 t1, T2 t2) {
-        proc.call(t1, t2);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2)};
+        proc.call(context, array);
     }
 
     @Override
     public void call(T1 t1, T2 t2, T3 t3) {
-        proc.call(t1, t2, t3);
+        IRubyObject[] array = {JavaUtil.convertJavaToRuby(runtime, t1),
+                               JavaUtil.convertJavaToRuby(runtime, t2),
+                               JavaUtil.convertJavaToRuby(runtime, t3)};
+        proc.call(context, array);
     }
 
 }
