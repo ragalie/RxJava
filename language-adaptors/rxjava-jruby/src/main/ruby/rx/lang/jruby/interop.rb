@@ -13,14 +13,14 @@ classes.each do |klass|
   end
 
   types_by_name_and_signature = Hash[methods_by_name.values.flatten.map do |method|
-    [[method.name, *method.parameter_types.map {|type| superclass.assignable_from?(type)}], method.parameter_types]
+    [[method.name, *method.parameter_types.map {|type| superclass.assignable_from?(type).to_s}].join(" "), method.parameter_types]
   end]
 
   methods_by_name.keys.each do |method_name|
     klass.send(:alias_method, "#{method_name}_without_wrapping", method_name)
     klass.send(:remove_method, method_name)
     klass.send(:define_method, method_name) do |*args, &block|
-      key = [method_name, *(args + [block].compact).map {|a| a.is_a?(Proc)}]
+      key = [method_name, *(args + [block].compact).map {|a| a.is_a?(Proc)}].join(" ")
 
       if types = types_by_name_and_signature[key]
         args = args.each_with_index.map do |arg, idx|
