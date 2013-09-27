@@ -1,60 +1,39 @@
-require 'pp'
+classes    = [Java::Rx::Observable, Java::RxObservables::BlockingObservable]
+superclass = Java::RxUtilFunctions::Function.java_class
 
-klasses  = [Java::Rx::Observable, Java::RxObservables::BlockingObservable]
-function = Java::RxUtilFunctions::Function.java_class
-
-WRAPPERS = {
-  Java::RxUtilFunctions::Action         => Java::RxLangJruby::JRubyActionWrapper,
-  Java::Rx::Observable::OnSubscribeFunc => Java::RxLangJruby::JRubyOnSubscribeFuncWrapper
-}
-
-WRAPPERS.default = Java::RxLangJruby::JRubyFunctionWrapper
-
-klasses.each do |klass|
+classes.each do |klass|
   function_methods = klass.java_class.declared_instance_methods.select do |method|
-    method.public? && method.parameter_types.any? {|type| function.assignable_from?(type)}
+    method.public? && method.parameter_types.any? {|type| superclass.assignable_from?(type)}
   end
 
-  parameter_types = {}
-  function_methods.each do |method|
-    parameter_types[method.name] ||= []
-
-    method.parameter_types.each_with_index do |type, idx|
-      next unless function.assignable_from?(type)
-
-      constructor = WRAPPERS.find do |java_class, wrapper|
-        type.ruby_class.ancestors.include?(java_class)
-      end
-
-      constructor = (constructor && constructor.last) || WRAPPERS.default
-
-      parameter_types[method.name][idx] ||= []
-      parameter_types[method.name][idx] << constructor
-    end
+  methods_by_name = function_methods.group_by(&:name)
+  methods_by_name.delete_if do |_, methods|
+    signatures_by_function_state = methods.map {|m| m.parameter_types.map {|type| superclass.assignable_from?(type)}}
+    signatures_by_function_state != signatures_by_function_state.uniq
   end
 
-  parameter_types.each_pair do |method_name, types|
-    types.map! do |type|
-      next type.first if type && type.uniq.length == 1
-      nil
-    end
-  end
+  types_by_name_and_signature = Hash[methods_by_name.values.flatten.map do |method|
+    [[method.name, *method.parameter_types.map {|type| superclass.assignable_from?(type)}], method.parameter_types]
+  end]
 
-  parameter_types.each_pair do |method_name, types|
-    next if types.all?(&:nil?)
-
+  methods_by_name.keys.each do |method_name|
     klass.send(:alias_method, "#{method_name}_without_wrapping", method_name)
+    klass.send(:remove_method, method_name)
     klass.send(:define_method, method_name) do |*args, &block|
-      args = args.each_with_index.map do |arg, idx|
-        if arg.is_a?(Proc) && types[idx]
-          types[idx].new(JRuby.runtime.get_current_context, arg)
-        else
-          arg
-        end
-      end
+      key = [method_name, *(args + [block].compact).map {|a| a.is_a?(Proc)}]
 
-      if block && types[args.length]
-        block = types[args.length].new(JRuby.runtime.get_current_context, block)
+      if types = types_by_name_and_signature[key]
+        args = args.each_with_index.map do |arg, idx|
+          if arg.is_a?(Proc) && key[idx]
+            arg.to_java(types[idx].ruby_class)
+          else
+            arg
+          end
+        end
+
+        if block && key[args.length]
+          block = block.to_java(types[args.length].ruby_class)
+        end
       end
 
       send("#{method_name}_without_wrapping", *(args + [block].compact))
